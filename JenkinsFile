@@ -1,0 +1,28 @@
+node {
+    def MavenHome=tool name:"Maven3.9.6"
+    
+    stage('CheckOutCode'){
+        git branch: 'development', credentialsId: '44e3d690-87b8-4542-aafb-28b93479fa38', 
+        url: 'https://github.com/psanjeevkumar799/Wallmart-Web-Application.git'
+    }
+    
+    stage('build'){
+        sh "${MavenHome}/bin/mvn clean package"
+    }
+    stage('SonarQube'){
+        sh "${MavenHome}/bin/mvn clean package sonar:sonar"
+    }
+    stage('UploadArtifactsToNexus'){
+        sh "${MavenHome}/bin/mvn clean deploy"
+    }
+    stage('Deploy'){
+        sshagent(['6350e211-f1b7-4eb5-b7a3-6047f44c303e']) {
+          sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ec2-user@65.2.80.11:/opt/apache-tomcat-9.0.86/webapps"
+    }
+    stage('SendEmailNotification'){
+        emailext body: '''Build is over ....
+        Regards,
+        Sanjeev Kumar''', subject: 'build is over !!!', to: 'psanjeevkumar99@gmail.com'
+    }
+    }
+}
